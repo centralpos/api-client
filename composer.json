@@ -1,0 +1,26 @@
+{
+    "name": "centralpos/api-client",
+    "description": "Cliente para laravel api rest",
+    "type": "library",
+    "require": {
+        "php": ">=5.5.9",
+        "rmccue/requests": ">=1.0",
+        "jenssegers/model": "^1.1",
+        "nesbot/carbon": "~1.18",
+        "namshi/jose": ">=5.0",
+        "illuminate/pagination": "^5.0,<5.4",
+        "illuminate/support": "^5.0,<5.4",
+        "illuminate/contracts": "^5.0,<5.4"
+    },
+    "authors": [
+        {
+            "name": "Gonzalo Torres",
+            "email": "torresgonzalom@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Centralpos\\ApiClient\\": "src/"
+        }
+    }
+}
