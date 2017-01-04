@@ -33,7 +33,7 @@ class ApiClientManager{
 
     /**
      * @param null|string $name
-     * @return ApiClient
+     * @return \Centralpos\ApiClient\ApiClient
      * @throws \Exception
      */
     public function connection($name = null){
