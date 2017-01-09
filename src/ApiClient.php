@@ -16,6 +16,7 @@ namespace Centralpos\ApiClient;
 use Carbon\Carbon;
 use Namshi\JOSE\JWS;
 use Requests_Session;
+use Illuminate\Contracts\Cache\Repository as Cache;
 
 class ApiClient{
 
@@ -23,25 +24,64 @@ class ApiClient{
      * @var string
      */
     protected $token;
+    
     /**
      * @var array
      */
     protected $config;
+    
     /**
      * @var Requests_Session
      */
     protected $session;
+    
+    /**
+     * @var Cache
+     */
+    protected $cache;
+
+    /**
+     * @var string
+     */
+    protected $cacheKey;
 
     /**
      * ApiClient constructor.
      * @param array $config
+     * @param Cache $cache
      */
-    public function __construct(array $config) {
+    public function __construct(array $config, Cache $cache) {
 
         $this->config = $config;
-        $timeout = array_key_exists('timeout', $config) ? $config['timeout'] : 10;
-        
-        $this->session = new Requests_Session($config['url'], [], [], compact('timeout'));
+        $this->cache = $cache;
+        $this->cacheKey = 'apiclient.'. $config['name'];
+
+        $this->makeNewSession();
+    }
+
+    /**
+     *  Crea una nueva instancia de la
+     *  clase Requests_Session en session y si
+     *  existe un token en la cache lo carga
+     */
+    protected function makeNewSession(){
+
+        $timeout = array_key_exists('timeout', $this->config) ? $this->config['timeout'] : 10;
+
+        $this->session = new Requests_Session($this->config['url'], [], [], compact('timeout'));
+
+        if($token = $this->getTokenFromCache()){
+
+            $this->setToken($token);
+        }
+    }
+
+    /**
+     * @return false|string
+     */
+    protected function getTokenFromCache(){
+
+        return !$this->cache->has($this->cacheKey) ? false : $this->cache->get($this->cacheKey);
     }
 
     /**
@@ -53,10 +93,10 @@ class ApiClient{
 
         if(! $response->success){
 
-            throw new \Exception('No se pudo iniciar sesión.');
+            throw new \Exception('No se pudo iniciar sesión en '. $this->config['url']);
         }
 
-        return $this->setToken($response);
+        return $this->setNewToken($response);
     }
 
     /**
@@ -134,14 +174,23 @@ class ApiClient{
      * @param \Requests_Response $response
      * @return true
      */
-    protected function setToken(\Requests_Response $response){
+    protected function setNewToken(\Requests_Response $response){
 
         $json = json_decode($response->body);
-        $this->token = $json->token;
 
-        $this->session->headers['Authorization'] = 'Bearer '. $this->token;
+        $this->cache->put($this->cacheKey, $json->token, $this->tokenExpiration($json->token));
+        $this->setToken($json->token);
 
         return true;
+    }
+
+    /**
+     * @param string $token
+     */
+    protected function setToken($token){
+
+        $this->token = $token;
+        $this->session->headers['Authorization'] = 'Bearer '. $token;
     }
 
     /**
@@ -161,20 +210,30 @@ class ApiClient{
     }
 
     /**
-     *
+     * @return boolean
      */
     public function sessionExpired(){
 
         if(! empty($this->token)){
 
-            $jws = JWS::load($this->token);
-            $payload = $jws->getPayload();
-            $exp = Carbon::createFromTimestamp($payload['exp']);
+            $tokenExpiration = $this->tokenExpiration($this->token);
 
-            return $exp->lt(Carbon::now());
+            return $tokenExpiration->lt(Carbon::now());
         }
 
         return true;
+    }
+
+    /**
+     * @param string $token
+     * @return Carbon
+     */
+    public function tokenExpiration($token){
+
+        $jws = JWS::load($token);
+        $payload = $jws->getPayload();
+
+        return Carbon::createFromTimestamp($payload['exp']);
     }
 
     /**
@@ -182,13 +241,8 @@ class ApiClient{
      */
     public function logout(){
 
+        $this->cache->forget($this->cacheKey);
         return $this->get("auth/logout");
     }
-
-    function __destruct()
-    {
-        $this->logout();
-    }
-
 
 }

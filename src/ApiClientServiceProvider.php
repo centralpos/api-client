@@ -32,9 +32,8 @@ class ApiClientServiceProvider extends ServiceProvider
 		//
 		$this->app->singleton('apiclient', function(Container $app)
 		{
-			$config = $app['config'];
 			
-			return new ApiClientManager($config);
+			return new ApiClientManager($app['config'], $app['cache.store']);
 		});
 	}
 

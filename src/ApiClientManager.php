@@ -9,6 +9,7 @@
 namespace Centralpos\ApiClient;
 
 use Illuminate\Contracts\Config\Repository;
+use Illuminate\Contracts\Cache\Repository as Cache;
 
 class ApiClientManager{
     
@@ -23,12 +24,19 @@ class ApiClientManager{
     protected $connections = [];
 
     /**
+     * @var Cache
+     */
+    protected $cache;
+
+    /**
      * Api constructor.
      * @param Repository $config
+     * @param Cache $cache
      */
-    public function __construct(Repository $config) {
+    public function __construct(Repository $config, Cache $cache) {
 
         $this->config = $config;
+        $this->cache = $cache;
     }
 
     /**
@@ -56,7 +64,7 @@ class ApiClientManager{
 
         $config = $this->getConnectionConfig($name);
 
-        return new ApiClient($config);
+        return new ApiClient($config, $this->cache);
     }
 
     /**
@@ -64,7 +72,7 @@ class ApiClientManager{
      * @return array
      * @throws \Exception
      */
-    public function getConnectionConfig($name = null){
+    public function getConnectionConfig($name){
 
         $connections = $this->config->get("api-client.connections");
 
@@ -73,7 +81,7 @@ class ApiClientManager{
             throw new \Exception("Connection [$name] not configured.");
         }
 
-        return $config;
+        return array_merge($config, compact('name'));
     }
 
     /**
