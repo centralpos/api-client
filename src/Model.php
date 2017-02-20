@@ -282,9 +282,9 @@ class Model extends \Jenssegers\Model\Model
 
             $data = $json[$this->plural_resource_name];
 
-            if($first && count($data) == 1){
+            if($first){
 
-                return $this->fillModel($data[0]);
+                return empty($data) ? null : $this->fillModel($data[0]);
             }
 
             return $this->makeCollection($json[$this->plural_resource_name]);
