@@ -529,4 +529,22 @@ class RequestBuilder
         return $this;
     }
 
+    /**
+     * @return int
+     */
+    public function count(){
+
+        $limit=$this->limit;
+
+        $this->setRawParams(['_config' => 'meta-filter-count'])
+            ->take(1)
+            ->get();
+
+        $total = $this->lastResponse->headers['Meta-Filter-Count'];
+
+        $this->take($limit);
+
+        return $total;
+    }
+
 }
